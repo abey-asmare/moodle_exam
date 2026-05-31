@@ -1,8 +1,4 @@
 "use client";
-
-// app/examination/page.tsx
-// Lists all examinations and lets the user generate a new one by mode.
-
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -16,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import MetricsPanel from "./Metrics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +33,7 @@ type YearOption = { year: number; type: "MODEL" | "EXIT"; label: string };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
+const YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -110,7 +107,7 @@ export default function ExaminationPage() {
 
       <div className="px-4 py-4 border-b border-[#ddd]">
         <h1 className="text-[28px] md:text-[32px] font-bold text-[#333]">
-          Computer Science
+          Software Engineering
         </h1>
         <div className="text-[14px] text-[#777] mt-0.5">
           Exit Exam Practice — choose a mode to begin
@@ -126,6 +123,8 @@ export default function ExaminationPage() {
           </div>
         )}
 
+        {/* Metrics */}
+        {!loading && <MetricsPanel exams={exams} />}
         {/* ── Mode cards ── */}
         <section>
           <h2 className="text-[15px] font-semibold text-[#333] mb-3 border-b border-[#ddd] pb-2">

@@ -16,7 +16,7 @@ import { Subject, Type } from "@/app/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-const TOTAL = 100;
+const TOTAL = 110;
 const SUBJECTS = Object.values(Subject);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -75,7 +75,6 @@ export async function POST(req: Request) {
 
   // ── MODE: random ────────────────────────────────────────────────────────────
   if (mode === "random") {
-    // Equal proportion from each subject; any question (attempted or not)
     const bySubject = await Promise.all(
       SUBJECTS.map((s) =>
         prisma.question.findMany({
@@ -93,13 +92,19 @@ export async function POST(req: Request) {
       const n = picks.get(s) ?? 0;
       questionIds.push(...shuffle(bySubject[i].map((q) => q.id)).slice(0, n));
     });
+
+    if (questionIds.length === 0) {
+      return NextResponse.json(
+        { error: "No questions found in the database yet." },
+        { status: 404 },
+      );
+    }
   }
 
-  // ── MODE: catalog (unattempted model / final exams) ─────────────────────────
+  // ── MODE: catalog ───────────────────────────────────────────────────────────
   else if (mode === "catalog") {
     const { type } = body as { type: "MODEL" | "EXIT" };
 
-    // Questions now carry the type — build a fresh exam from unattempted questions of this type
     const allQuestions = await prisma.question.findMany({
       where: { type: type as Type },
       select: { id: true, subject: true },
@@ -118,6 +123,7 @@ export async function POST(req: Request) {
       list.push(q.id);
       buckets.set(q.subject, list);
     }
+
     const sizeBuckets = new Map<Subject, number>();
     for (const [s, ids] of buckets) sizeBuckets.set(s, ids.length);
 
@@ -130,11 +136,11 @@ export async function POST(req: Request) {
       questionIds.push(...shuffle([...ids]).slice(0, n));
     }
   }
-  // ── MODE: year ───────────────────────────────────────────────────────────────
+
+  // ── MODE: year ──────────────────────────────────────────────────────────────
   else if (mode === "year") {
     const { type, year } = body as { type: "MODEL" | "EXIT"; year: number };
 
-    // Count how many questions exist for this year+type combination
     const allForYear = await prisma.question.findMany({
       where: { year, type: type as Type },
       select: { id: true, subject: true },
@@ -147,7 +153,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Group by subject for proportional sampling
     const buckets = new Map<Subject, number[]>();
     for (const q of allForYear) {
       const list = buckets.get(q.subject) ?? [];
@@ -167,11 +172,11 @@ export async function POST(req: Request) {
       questionIds.push(...shuffle([...ids]).slice(0, n));
     }
 
-    // Create a new Examination seeded with these questions
-    // Title encodes type+year+index so the user can identify it
     const existingCount = await prisma.examination.count({
       where: {
-        title: { startsWith: `${type === "MODEL" ? "Model" : "Exit"} ${year}` },
+        title: {
+          startsWith: `${type === "MODEL" ? "Model" : "Exit"} ${year}`,
+        },
       },
     });
     const index = existingCount + 1;
@@ -188,13 +193,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ exam_id: exam.id });
   }
 
-  // ── MODE: hard ───────────────────────────────────────────────────────────────
+  // ── MODE: hard ──────────────────────────────────────────────────────────────
   else if (mode === "hard") {
-    // Collect question ids that are:
-    //   a) flagged (Question.is_flagged = true), OR
-    //   b) answered incorrectly in any past attempt (AttemptAnswer.is_correct = false)
-    // De-duplicate, shuffle, take up to TOTAL.
-
     const [flagged, incorrect] = await Promise.all([
       prisma.question.findMany({
         where: { is_flagged: true },
@@ -220,14 +220,24 @@ export async function POST(req: Request) {
     }
 
     questionIds = shuffle(Array.from(idSet)).slice(0, TOTAL);
-  } else {
+  }
+
+  // ── Unknown mode ────────────────────────────────────────────────────────────
+  else {
     return NextResponse.json({ error: "Unknown mode." }, { status: 400 });
   }
 
-  // ── For random / hard: create a fresh Examination with the picked questions ──
+  // ── Final guard + create (random, catalog, hard) ────────────────────────────
+  if (questionIds.length === 0) {
+    return NextResponse.json(
+      { error: "No questions available for this mode." },
+      { status: 404 },
+    );
+  }
 
   const modeLabel: Record<string, string> = {
     random: "Random",
+    catalog: "Catalog",
     hard: "Hard",
   };
 

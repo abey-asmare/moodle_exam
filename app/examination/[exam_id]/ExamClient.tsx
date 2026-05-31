@@ -12,6 +12,7 @@ import {
   MinusCircle,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -673,7 +674,7 @@ function MoodleShell({
       </div>
       <div className="px-4 py-4 border-b border-[#ddd]">
         <h1 className="text-[28px] md:text-[32px] font-bold text-[#333]">
-          {exam.title ?? "Computer Science"}
+          {exam.title ?? "Software Engineering"}
         </h1>
         <div className="text-[13px] text-[#777] mt-0.5">
           {exam.type === "MODEL" ? "Model Exam" : "Exit Exam"} ·{" "}
@@ -881,7 +882,7 @@ function ResultScreen({
               >
                 Review answers →
               </button>
-              <a
+              <Link
                 href="/examination"
                 className="inline-flex items-center px-5 py-2 text-[14px] text-[#333] bg-[#e8e8e8] border border-[#ccc] rounded hover:bg-[#d5d5d5] transition-colors"
               >
