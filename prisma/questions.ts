@@ -15,9 +15,6 @@ const a = [{
 
 
 
-type Question  = {
-  subject: Subject, from?: string, text: string, choices: string[], correctIndex:number, type?: Type, 
-}
 
-const questions: Question[] = [...a]
+const questions = [...a]
 export default questions

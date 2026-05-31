@@ -8,6 +8,8 @@ const adapter = new PrismaPg({
 });
 const prisma = new PrismaClient({ adapter });
 
+
+
 async function main() {
   for (const q of questions) {
     // Create the question (exam_id is null, to be linked later)
