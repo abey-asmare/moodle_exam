@@ -185,7 +185,6 @@ export async function POST(req: Request) {
     const exam = await prisma.examination.create({
       data: {
         title,
-        type: type as Type,
         questions: { connect: questionIds.map((id) => ({ id })) },
       },
     });
@@ -244,7 +243,6 @@ export async function POST(req: Request) {
   const exam = await prisma.examination.create({
     data: {
       title: modeLabel[mode] ?? mode,
-      type: "MODEL",
       questions: { connect: questionIds.map((id) => ({ id })) },
     },
   });

@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ExamClient } from "./ExamClient";
 
-const TOTAL_TIME = 1 * 60 * 60; // 1 hours in seconds
+const TOTAL_TIME = 1 * 60 * 60 + 40; // 1 hours in seconds
 
 export default async function ExamPage({
   params,

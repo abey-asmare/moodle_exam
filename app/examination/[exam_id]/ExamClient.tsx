@@ -887,7 +887,7 @@ function ResultScreen({
                 className="inline-flex items-center px-5 py-2 text-[14px] text-[#333] bg-[#e8e8e8] border border-[#ccc] rounded hover:bg-[#d5d5d5] transition-colors"
               >
                 ← All exams
-              </a>
+              </Link>
             </div>
           </div>
         </div>
