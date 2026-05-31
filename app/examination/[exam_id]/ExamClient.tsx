@@ -63,7 +63,6 @@ export type SafeQuestion = {
 export type SafeExam = {
   id: number;
   title: string | null;
-  type: "MODEL" | "EXIT";
   questions: SafeQuestion[];
 };
 type AttemptAnswer = {
@@ -261,12 +260,12 @@ export function ExamClient({
       {/* ── Desktop layout ── */}
       <div className="hidden md:block">
         <div className="px-4 pt-3 pb-1">
-          <a
+          <Link
             href="/examination"
             className="inline-flex items-center px-3 py-1.5 text-[13px] text-[#333] bg-[#e8e8e8] border border-[#ccc] rounded hover:bg-[#d5d5d5] transition-colors"
           >
             Back
-          </a>
+          </Link>
         </div>
 
         <div className="flex justify-end px-4 pb-2">
@@ -285,16 +284,16 @@ export function ExamClient({
           </div>
         </div>
 
-        <div className="flex gap-0 px-4 pb-6 items-start">
+        <div className="flex gap-4 px-4 pb-6 items-start">
+          <QuestionInfoBlock
+            index={currentQ}
+            questionId={q.id}
+            answered={answers[q.id] !== null && answers[q.id] !== undefined}
+            flagged={flagged.has(q.id)}
+            onToggleFlag={() => toggleFlag(q.id)}
+          />
           {/* Question */}
           <div className="flex-1 min-w-0 mr-4">
-            <QuestionInfoBlock
-              index={currentQ}
-              questionId={q.id}
-              answered={answers[q.id] !== null && answers[q.id] !== undefined}
-              flagged={flagged.has(q.id)}
-              onToggleFlag={() => toggleFlag(q.id)}
-            />
             <div className="border border-t-0 border-[#ddd] bg-[#ebf3fc] px-4 py-4 mb-3">
               <div className="text-[14.5px] text-[#333] leading-relaxed mb-4">
                 {q.text}
@@ -360,7 +359,7 @@ export function ExamClient({
           </div>
 
           {/* Sidebar */}
-          <div className="w-[220px] shrink-0">
+          <div className="min-w-[240px] shrink-0">
             <ExamNavSidebar
               questions={questions}
               answers={answers}
@@ -378,12 +377,12 @@ export function ExamClient({
       {/* ── Mobile layout ── */}
       <div className="block md:hidden">
         <div className="px-3 pt-3 pb-2">
-          <a
+          <Link
             href="/examination"
             className="inline-flex items-center px-4 py-1.5 text-[14px] text-[#333] bg-[#e8e8e8] border border-[#ccc] rounded"
           >
             Back
-          </a>
+          </Link>
         </div>
 
         <div className="flex justify-end px-3 pb-3">
@@ -588,7 +587,7 @@ function ExamNavSidebar({
         </h3>
       </div>
       <div className="bg-white px-3 py-3">
-        <div className="grid grid-cols-9 gap-0.5 mb-3">
+        <div className="grid grid-cols-10 gap-0.5 mb-3">
           {questions.map((question, idx) => {
             const isAnswered =
               answers[question.id] !== null &&
@@ -601,7 +600,7 @@ function ExamNavSidebar({
                 onClick={() => setCurrentQ(idx)}
                 title={`Question ${idx + 1}`}
                 className={cn(
-                  "h-[26px] w-full text-[11px] font-normal border transition-colors",
+                  "h-[26px] w-full px-1 text-[11px] font-normal border transition-colors",
                   isCurrent
                     ? "bg-[#555] border-[#333] text-white"
                     : isFlagged
@@ -677,7 +676,6 @@ function MoodleShell({
           {exam.title ?? "Software Engineering"}
         </h1>
         <div className="text-[13px] text-[#777] mt-0.5">
-          {exam.type === "MODEL" ? "Model Exam" : "Exit Exam"} ·{" "}
           {exam.questions.length} questions
         </div>
       </div>
@@ -710,12 +708,6 @@ function StartScreen({
             <table className="w-full text-[14px] border border-[#ddd]">
               <tbody>
                 {[
-                  [
-                    "Exam type",
-                    exam.type === "EXIT"
-                      ? "Final Examination"
-                      : "Model Examination",
-                  ],
                   ["Total questions", String(exam.questions.length)],
                   ["Time allowed", formatTime(totalTime)],
                   [
@@ -1027,7 +1019,7 @@ function ReviewScreen({
         </div>
 
         {/* Review sidebar */}
-        <div className="w-[220px] shrink-0">
+        <div className="min-w-[240px] shrink-0">
           <div className="border border-[#ddd]">
             <div className="bg-[#f5f5f5] border-b border-[#ddd] px-3 py-2">
               <h3 className="text-[14px] font-semibold">Quiz navigation</h3>

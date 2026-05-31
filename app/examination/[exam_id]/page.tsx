@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ExamClient } from "./ExamClient";
 
-const TOTAL_TIME = 1 * 60 * 60 + 40; // 1 hours in seconds
+const TOTAL_TIME = 1 * 60 * 60 + 40 * 60; // 1 hour and 40 minutes in seconds
 
 export default async function ExamPage({
   params,
@@ -31,7 +31,6 @@ export default async function ExamPage({
   const safeExam = {
     id: exam.id,
     title: exam.title,
-    type: exam.type as "MODEL" | "EXIT",
     questions: exam.questions.map(({ answer_id, ...q }) => ({
       ...q,
       subject: q.subject as any,
