@@ -14,7 +14,7 @@ async function main() {
     const question = await prisma.question.create({
       data: {
         text: q.text,
-        subject: Subject.DATABASE_SYSTEMS,
+        subject: q.subject as Subject,
         type: Type.MODEL,
         year: 2019,
         from: null,

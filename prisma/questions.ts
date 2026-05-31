@@ -1,3 +1,5 @@
+import { Prisma, Subject, Type } from "@/app/generated/prisma/client"
+
 const a = [{
     subject: "AI_ML",
     from: "St. Mary's University College",
@@ -12,4 +14,10 @@ const a = [{
   },]
 
 
-export default [...a,]
+
+type Question  = {
+  subject: Subject, from?: string, text: string, choices: string[], correctIndex:number, type?: Type, 
+}
+
+const questions: Question[] = [...a]
+export default questions
