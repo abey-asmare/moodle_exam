@@ -24,7 +24,6 @@ export async function GET() {
     return {
       id: exam.id,
       title: exam.title,
-      type: exam.type,
       question_count: exam._count.questions,
       last_attempt: lastAttempt
         ? {
