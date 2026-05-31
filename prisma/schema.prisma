@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum Type {
+  MODEL 
+  EXIT
+}
+
+
+
+
+enum Subject {
+  FOP              // Fundamentals of Programming
+  DSA              // Data Structures & Algorithms
+  OOP              // Object-Oriented Programming
+  WEB              // Internet/Web Programming
+  MAD              // Mobile Application Development
+  DBMS             // Fundamentals of Database Systems
+  OS               // Operating Systems
+
+  SE               // Fundamentals of Software Engineering
+  SRE              // Software Requirement Engineering
+  SAD              // Software Architecture & Design
+
+  SPM              // Software Project Management
+  STQA             // Software Testing & Quality Assurance
+  SEM              // Software Evolution & Maintenance
+
+  NSS              // Networking + Software & Information Security
+
+  AI_ML            // Artificial Intelligence & Machine Learning
+}
+
+
+model Choice {
+  id          Int      @id @default(autoincrement())
+  choice_text String
+
+  question_id Int
+  question    Question @relation(fields: [question_id], references: [id])
+
+  selectedByUsers Question[] @relation("UserAnswer")
+  correctFor      Question[] @relation("CorrectAnswer")
+}
+
+model Question {
+  id Int @id @default(autoincrement())
+  text String
+  choices Choice[]
+
+  answer_id Int
+  answer    Choice @relation("CorrectAnswer", fields: [answer_id], references: [id])
+
+  user_answer_id Int?
+  user_answer    Choice? @relation("UserAnswer", fields: [user_answer_id], references: [id])
+
+  year Int @default(2019)
+  type Type @default(MODEL)
+  from String
+  is_flagged Boolean @default(false)
+  subject Subject
+}
