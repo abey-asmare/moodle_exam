@@ -14,61 +14,96 @@ datasource db {
 
 
 enum Type {
-  MODEL 
+  MODEL
   EXIT
 }
-
-
-
-
 enum Subject {
-  FOP              // Fundamentals of Programming
-  DSA              // Data Structures & Algorithms
-  OOP              // Object-Oriented Programming
-  WEB              // Internet/Web Programming
-  MAD              // Mobile Application Development
-  DBMS             // Fundamentals of Database Systems
-  OS               // Operating Systems
-
-  SE               // Fundamentals of Software Engineering
-  SRE              // Software Requirement Engineering
-  SAD              // Software Architecture & Design
-
-  SPM              // Software Project Management
-  STQA             // Software Testing & Quality Assurance
-  SEM              // Software Evolution & Maintenance
-
-  NSS              // Networking + Software & Information Security
-
-  AI_ML            // Artificial Intelligence & Machine Learning
+    PROGRAMMING
+    DATA_STRUCTURES_ALGORITHMS
+    OOP
+    WEB_PROGRAMMING
+    MOBILE_DEVELOPMENT
+    DATABASE_SYSTEMS
+    OPERATING_SYSTEMS
+    SOFTWARE_ENGINEERING
+    REQUIREMENTS_ENGINEERING
+    ARCHITECTURE_DESIGN
+    PROJECT_MANAGEMENT
+    TESTING_QA
+    EVOLUTION_MAINTENANCE
+    NETWORKING
+    AI_ML
 }
 
+model Examination {
+  id        Int      @id @default(autoincrement())
+  title     String?
+
+  questions Question[]
+  attempts  ExamAttempt[]
+}
+
+model Question {
+  id         Int      @id @default(autoincrement()) 
+  text       String
+  subject    Subject
+  type      Type     @default(MODEL)
+
+  year       Int      @default(2019)
+  from       String?
+  is_flagged Boolean  @default(false)
+
+  exam_id    Int
+  exam       Examination @relation(fields: [exam_id], references: [id])
+
+  choices    Choice[]
+
+  // correct answer
+  answer_id  Int?
+  answer     Choice? @relation("CorrectAnswer", fields: [answer_id], references: [id])
+
+  // user answers
+  attempt_answers AttemptAnswer[]
+}
 
 model Choice {
+  id           Int    @id @default(autoincrement())
+  choice_text  String
+
+  question_id  Int
+  question     Question @relation(fields: [question_id], references: [id])
+
+  // back relation for correct answer
+  correct_for  Question[] @relation("CorrectAnswer")
+
+  selected_in  AttemptAnswer[]
+}
+
+model ExamAttempt {
   id          Int      @id @default(autoincrement())
-  choice_text String
+
+  exam_id     Int
+  exam        Examination @relation(fields: [exam_id], references: [id])
+
+  started_at  DateTime @default(now())
+  finished_at DateTime?
+
+  score       Int?
+
+  answers     AttemptAnswer[]
+}
+
+model AttemptAnswer {
+  id Int @id @default(autoincrement())
+
+  attempt_id Int
+  attempt    ExamAttempt @relation(fields: [attempt_id], references: [id])
 
   question_id Int
   question    Question @relation(fields: [question_id], references: [id])
 
-  selectedByUsers Question[] @relation("UserAnswer")
-  correctFor      Question[] @relation("CorrectAnswer")
-}
+  selected_choice_id Int?
+  selected_choice    Choice? @relation(fields: [selected_choice_id], references: [id])
 
-model Question {
-  id Int @id @default(autoincrement())
-  text String
-  choices Choice[]
-
-  answer_id Int
-  answer    Choice @relation("CorrectAnswer", fields: [answer_id], references: [id])
-
-  user_answer_id Int?
-  user_answer    Choice? @relation("UserAnswer", fields: [user_answer_id], references: [id])
-
-  year Int @default(2019)
-  type Type @default(MODEL)
-  from String
-  is_flagged Boolean @default(false)
-  subject Subject
+  is_correct Boolean?
 }
