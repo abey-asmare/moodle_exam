@@ -1,33 +1,23 @@
 "use client";
 
-import { ExamAttempt } from "@/app/generated/prisma/client";
 // app/examination/[exam_id]/ExamClient.tsx
 // Full client-side exam logic — timer, answers, navigation, review.
 // Flag state is initialised from Question.is_flagged and persisted to DB via API.
 
+import { formatTime } from "@/lib/helpers";
+import { ExamAttempt, Phase, SafeExam, SafeQuestion, ScoredQuestion } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Phase, SafeExam, SafeQuestion, ScoredQuestion } from "@/lib/types";
 import {
   AlertTriangle,
   CheckCircle2,
-  Flag,
   MinusCircle,
-  XCircle,
+  XCircle
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import MoodleShell from "./MoodleShell";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatTime(seconds: number) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0)
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+import QuestionInfoBlock from "./QuizInfoBlock";
+import QuizNavigation from "./QuizNavigation";
 
 export function ExamClient({
   exam,
@@ -409,90 +399,20 @@ export function ExamClient({
             </button>
           )}
         </div>
-
-        <div className="mx-3 mb-6">
-          <h3 className="text-[16px] font-bold text-[#333] mb-3">
-            Quiz navigation
-          </h3>
-          <div className="grid grid-cols-8 gap-1 mb-3">
-            {questions.map((question, idx) => {
-              const isAnswered =
-                answers[question.id] !== null &&
-                answers[question.id] !== undefined;
-              const isCurrent = idx === currentQ;
-              const isFlagged = flagged.has(question.id);
-              return (
-                <button
-                  key={question.id}
-                  onClick={() => setCurrentQ(idx)}
-                  className={cn(
-                    "h-9 w-full text-[13px] font-normal border transition-colors",
-                    isCurrent
-                      ? "bg-[#555] border-[#333] text-white"
-                      : isFlagged
-                        ? "bg-[#f0ad4e] border-[#eea236] text-white"
-                        : isAnswered
-                          ? "bg-[#dce9f5] border-[#ccc] text-[#333]"
-                          : "bg-white border-[#ccc] text-[#333]",
-                  )}
-                >
-                  {idx + 1}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            disabled={submitting}
-            onClick={() => handleSubmit()}
-            className="w-full py-2 text-[14px] text-white bg-[#337ab7] border border-[#2e6da4] rounded hover:bg-[#286090] disabled:opacity-70"
-          >
-            {submitting ? "Submitting…" : "Finish attempt ..."}
-          </button>
-        </div>
+        <QuizNavigation
+          questions = {questions}
+          answers = {answers}
+          currentQ = {currentQ}
+          submitting = {submitting}
+          handleSubmit = {handleSubmit}
+          flagged = {flagged}
+          setCurrentQ = {setCurrentQ}
+        />
       </div>
     </MoodleShell>
   );
 }
 
-// ─── Question Info Block ──────────────────────────────────────────────────────
-
-function QuestionInfoBlock({
-  index,
-  questionId,
-  answered,
-  flagged,
-  onToggleFlag,
-}: {
-  index: number;
-  questionId: number;
-  answered: boolean;
-  flagged: boolean;
-  onToggleFlag: () => void;
-}) {
-  return (
-    <div className="border border-[#ddd]">
-      <div className="bg-[#f5f5f5] border-b border-[#ddd] px-3 py-2">
-        <div className="text-[14px] font-bold text-[#333]">
-          Question <span className="font-bold">{index + 1}</span>
-        </div>
-        <div className="text-[13px] text-[#555] mt-0.5">
-          {answered ? "Answer saved" : "Not yet answered"}
-        </div>
-        <div className="text-[13px] text-[#555]">Marked out of 1.00</div>
-        <button
-          onClick={onToggleFlag}
-          className={cn(
-            "mt-1 flex items-center gap-1 text-[13px]",
-            flagged ? "text-[#c9302c]" : "text-[#337ab7]",
-          )}
-        >
-          <Flag size={12} fill={flagged ? "currentColor" : "none"} />
-          {flagged ? "Remove flag" : "Flag question"}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Exam Nav Sidebar ─────────────────────────────────────────────────────────
 
@@ -582,7 +502,6 @@ function ExamNavSidebar({
     </div>
   );
 }
-
 
 function StartScreen({
   exam,

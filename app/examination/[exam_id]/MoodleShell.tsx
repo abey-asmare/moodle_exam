@@ -1,11 +1,10 @@
-import { SafeExam } from "@/lib/types";
-
+import { Exam, SafeExam } from "@/lib/types";
 
 function MoodleShell({
   exam,
   children,
 }: {
-  exam: SafeExam;
+  exam: Exam | SafeExam;
   children: React.ReactNode;
 }) {
   return (
@@ -36,5 +35,4 @@ function MoodleShell({
   );
 }
 
-
-export default MoodleShell
+export default MoodleShell;

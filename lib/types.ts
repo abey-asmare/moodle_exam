@@ -34,6 +34,7 @@ export const SUBJECT_LABELS: Record<Subject, string> = {
 };
 
 export type SafeChoice = { id: number; choice_text: string };
+
 export type SafeQuestion = {
   id: number;
   text: string;
@@ -41,22 +42,52 @@ export type SafeQuestion = {
   is_flagged: boolean;
   choices: SafeChoice[];
 };
+
 export type SafeExam = {
   id: number;
   title: string | null;
+  // type: "MODEL" | "EXIT";
   questions: SafeQuestion[];
 };
+
 export type AttemptAnswer = {
   question_id: number;
   selected_choice_id: number | null;
   is_correct: boolean | null;
 };
+
 export type ScoredQuestion = SafeQuestion & { answer_id: number };
+
 export type ExamAttempt = {
   id: number;
-  started_at: string ;
+  started_at: string;
   finished_at: string | null;
   score: number | null;
   answers: AttemptAnswer[];
 };
+
 export type Phase = "start" | "exam" | "result" | "review";
+
+// Used by ReviewClient — questions include choices and answer_id
+export type ReviewQuestion = {
+  id: number;
+  text: string;
+  subject: Subject;
+  answer_id: number;
+  choices: SafeChoice[];
+};
+
+export type Exam = {
+  id: number;
+  title: string | null;
+  // type: "MODEL" | "EXIT";
+  questions: ReviewQuestion[];
+};
+
+export type Attempt = {
+  id: number;
+  score: number | null;
+  started_at: string;
+  finished_at: string | null;
+  answers: AttemptAnswer[];
+};

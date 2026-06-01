@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import ReviewClient from "./REviewClient";
+import ReviewClient from "./ReviewClient";
+import { Subject } from "@/lib/types";
 
 export default async function ReviewPage({
   params,
@@ -30,34 +31,32 @@ export default async function ReviewPage({
   });
 
   if (!exam) notFound();
+ return (
+  <ReviewClient
+    exam={{
+      id: exam.id,
+      title: exam.title,
+      questions: exam.questions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        subject: q.subject as Subject,
+        is_flagged: q.is_flagged,
+        answer_id: q.answer_id!,
+        choices: q.choices.map(({ id, choice_text }) => ({ id, choice_text })),
+      })),
+    }}
+    attempt={{
+      id: attempt.id,
+      score: attempt.score,
+      started_at: attempt.started_at.toISOString(),
+      finished_at: attempt.finished_at?.toISOString() ?? null,
+      answers: attempt.answers.map((a) => ({
+        question_id: a.question_id,
+        selected_choice_id: a.selected_choice_id,
+        is_correct: a.is_correct,
+      })),
+    }}
+  />
+);
 
-  return (
-    <ReviewClient
-      exam={{
-        id: exam.id,
-        title: exam.title,
-        questions: exam.questions.map((q) => ({
-          id: q.id,
-          text: q.text,
-          subject: q.subject,
-          answer_id: q.answer_id!,
-          choices: q.choices.map(({ id, choice_text }) => ({
-            id,
-            choice_text,
-          })),
-        })),
-      }}
-      attempt={{
-        id: attempt.id,
-        score: attempt.score,
-        started_at: attempt.started_at.toISOString(),
-        finished_at: attempt.finished_at?.toISOString() ?? null,
-        answers: attempt.answers.map((a) => ({
-          question_id: a.question_id,
-          selected_choice_id: a.selected_choice_id,
-          is_correct: a.is_correct,
-        })),
-      }}
-    />
-  );
 }
