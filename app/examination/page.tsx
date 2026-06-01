@@ -269,11 +269,12 @@ export default function ExaminationPage() {
           ) : (
             <div className="border border-[#ddd] divide-y divide-[#eee]">
               {/* Table header — desktop */}
-              <div className="hidden md:grid grid-cols-[1fr_120px_100px_140px_44px] bg-[#f5f5f5] px-4 py-2 text-[12px] font-semibold text-[#555] uppercase tracking-wide">
+              <div className="hidden md:grid grid-cols-[1fr_120px_100px_140px_100px_44px] bg-[#f5f5f5] px-4 py-2 text-[12px] font-semibold text-[#555] uppercase tracking-wide">
                 <span>Title</span>
                 <span>Type</span>
                 <span className="text-center">Questions</span>
                 <span className="text-center">Last score</span>
+                <span className="text-center">Review</span>
                 <span />
               </div>
 
@@ -282,6 +283,7 @@ export default function ExaminationPage() {
                   key={exam.id}
                   exam={exam}
                   onClick={() => router.push(`/examination/${exam.id}`)}
+                  onReview={() => router.push(`/examination/${exam.id}/review`)}
                 />
               ))}
             </div>
@@ -382,9 +384,11 @@ function ModeCard({
 function ExamRow({
   exam,
   onClick,
+  onReview,
 }: {
   exam: ExamSummary;
   onClick: () => void;
+  onReview: () => void;
 }) {
   const attempt = exam.last_attempt;
   const attempted = attempt?.finished_at != null;
@@ -396,11 +400,8 @@ function ExamRow({
   return (
     <>
       {/* Desktop row */}
-      <button
-        onClick={onClick}
-        className="hidden md:grid grid-cols-[1fr_120px_100px_140px_44px] w-full px-4 py-3 text-left hover:bg-[#f5f9ff] transition-colors items-center"
-      >
-        <div>
+      <div className="hidden md:grid grid-cols-[1fr_120px_100px_140px_100px_44px] w-full px-4 py-3 items-center hover:bg-[#f5f9ff] transition-colors">
+        <button onClick={onClick} className="text-left">
           <span className="text-[14px] text-[#337ab7] hover:underline font-medium">
             {exam.title ?? `Exam #${exam.id}`}
           </span>
@@ -409,7 +410,7 @@ function ExamRow({
               Not attempted
             </span>
           )}
-        </div>
+        </button>
         <div>
           <span
             className={cn(
@@ -442,17 +443,24 @@ function ExamRow({
             <span className="text-[12px] text-[#ccc]">—</span>
           )}
         </div>
-        <div className="flex justify-end">
-          <ChevronRight size={16} className="text-[#aaa]" />
+        <div className="flex justify-center">
+          {attempted && (
+            <button
+              onClick={onReview}
+              className="text-[12px] px-2 py-1 border border-[#337ab7] text-[#337ab7] hover:bg-[#337ab7] hover:text-white transition-colors rounded-sm"
+            >
+              Review
+            </button>
+          )}
         </div>
-      </button>
+        <button onClick={onClick} className="flex justify-end">
+          <ChevronRight size={16} className="text-[#aaa]" />
+        </button>
+      </div>
 
       {/* Mobile row */}
-      <button
-        onClick={onClick}
-        className="flex md:hidden w-full px-4 py-3 text-left hover:bg-[#f5f9ff] transition-colors items-center gap-3"
-      >
-        <div className="flex-1 min-w-0">
+      <div className="flex md:hidden w-full px-4 py-3 items-center gap-3 hover:bg-[#f5f9ff] transition-colors">
+        <button onClick={onClick} className="flex-1 min-w-0 text-left">
           <div className="text-[14px] text-[#337ab7] font-medium truncate">
             {exam.title ?? `Exam #${exam.id}`}
           </div>
@@ -484,9 +492,19 @@ function ExamRow({
               <span className="text-[11px] text-[#888]">Not attempted</span>
             )}
           </div>
-        </div>
-        <ChevronRight size={16} className="text-[#aaa] shrink-0" />
-      </button>
+        </button>
+        {attempted && (
+          <button
+            onClick={onReview}
+            className="text-[12px] px-2 py-1 border border-[#337ab7] text-[#337ab7] hover:bg-[#337ab7] hover:text-white transition-colors rounded-sm shrink-0"
+          >
+            Review
+          </button>
+        )}
+        <button onClick={onClick}>
+          <ChevronRight size={16} className="text-[#aaa] shrink-0" />
+        </button>
+      </div>
     </>
   );
 }

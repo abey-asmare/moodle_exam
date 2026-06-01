@@ -1,10 +1,12 @@
 "use client";
 
+import { ExamAttempt } from "@/app/generated/prisma/client";
 // app/examination/[exam_id]/ExamClient.tsx
 // Full client-side exam logic — timer, answers, navigation, review.
 // Flag state is initialised from Question.is_flagged and persisted to DB via API.
 
 import { cn } from "@/lib/utils";
+import { Phase, SafeExam, SafeQuestion, ScoredQuestion } from "@/lib/types";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -14,71 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Subject =
-  | "PROGRAMMING"
-  | "DATA_STRUCTURES_ALGORITHMS"
-  | "OOP"
-  | "WEB_PROGRAMMING"
-  | "MOBILE_DEVELOPMENT"
-  | "DATABASE_SYSTEMS"
-  | "OPERATING_SYSTEMS"
-  | "SOFTWARE_ENGINEERING"
-  | "REQUIREMENTS_ENGINEERING"
-  | "ARCHITECTURE_DESIGN"
-  | "PROJECT_MANAGEMENT"
-  | "TESTING_QA"
-  | "EVOLUTION_MAINTENANCE"
-  | "NETWORKING"
-  | "AI_ML";
-
-const SUBJECT_LABELS: Record<Subject, string> = {
-  PROGRAMMING: "Programming",
-  DATA_STRUCTURES_ALGORITHMS: "Data Structures & Algorithms",
-  OOP: "Object-Oriented Programming",
-  WEB_PROGRAMMING: "Web Programming",
-  MOBILE_DEVELOPMENT: "Mobile Development",
-  DATABASE_SYSTEMS: "Database Systems",
-  OPERATING_SYSTEMS: "Operating Systems",
-  SOFTWARE_ENGINEERING: "Software Engineering",
-  REQUIREMENTS_ENGINEERING: "Requirements Engineering",
-  ARCHITECTURE_DESIGN: "Architecture & Design",
-  PROJECT_MANAGEMENT: "Project Management",
-  TESTING_QA: "Testing & QA",
-  EVOLUTION_MAINTENANCE: "Evolution & Maintenance",
-  NETWORKING: "Networking",
-  AI_ML: "AI & Machine Learning",
-};
-
-export type SafeChoice = { id: number; choice_text: string };
-export type SafeQuestion = {
-  id: number;
-  text: string;
-  subject: Subject;
-  is_flagged: boolean;
-  choices: SafeChoice[];
-};
-export type SafeExam = {
-  id: number;
-  title: string | null;
-  questions: SafeQuestion[];
-};
-type AttemptAnswer = {
-  question_id: number;
-  selected_choice_id: number | null;
-  is_correct: boolean | null;
-};
-type ScoredQuestion = SafeQuestion & { answer_id: number };
-type ExamAttempt = {
-  id: number;
-  started_at: string;
-  finished_at: string | null;
-  score: number | null;
-  answers: AttemptAnswer[];
-};
-type Phase = "start" | "exam" | "result" | "review";
+import MoodleShell from "./MoodleShell";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -90,8 +28,6 @@ function formatTime(seconds: number) {
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
-
-// ─── Root Client Component ────────────────────────────────────────────────────
 
 export function ExamClient({
   exam,
@@ -647,44 +583,6 @@ function ExamNavSidebar({
   );
 }
 
-// ─── Shared Shell ─────────────────────────────────────────────────────────────
-
-function MoodleShell({
-  exam,
-  children,
-}: {
-  exam: SafeExam;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-white font-sans text-[#333]">
-      <div className="bg-[#f5f5f5] border-b border-[#ddd] px-4 py-2 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#003087] flex items-center justify-center shrink-0">
-          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-            <span className="text-[8px] font-bold text-[#003087] leading-tight text-center">
-              MoE
-            </span>
-          </div>
-        </div>
-        <div>
-          <div className="text-[14px] font-semibold text-[#333]">MoEEE</div>
-          <div className="text-[11px] text-[#777]">MoE - Exit Exam</div>
-        </div>
-      </div>
-      <div className="px-4 py-4 border-b border-[#ddd]">
-        <h1 className="text-[28px] md:text-[32px] font-bold text-[#333]">
-          {exam.title ?? "Software Engineering"}
-        </h1>
-        <div className="text-[13px] text-[#777] mt-0.5">
-          {exam.questions.length} questions
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// ─── Start Screen ─────────────────────────────────────────────────────────────
 
 function StartScreen({
   exam,
