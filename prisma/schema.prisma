@@ -53,9 +53,7 @@ model Question {
   from       String?
   is_flagged Boolean  @default(false)
 
-  exam_id    Int?
-  exam       Examination? @relation(fields: [exam_id], references: [id])
-
+   exams      Examination[]
   choices    Choice[]
 
   // correct answer

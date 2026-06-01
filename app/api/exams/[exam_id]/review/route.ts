@@ -27,10 +27,15 @@ export async function GET(
     );
   }
 
-  const questions = await prisma.question.findMany({
-    where: { exam_id: examId },
-    include: { choices: true },
-  });
+  // const questions = await prisma.question.findMany({
+  //   where: { exam_id: examId },
+  //   include: { choices: true },
+  // });
+  const exam = await prisma.examination.findUnique({
+  where: { id: examId },
+  include: { questions: { include: { choices: true } } },
+});
+const questions = exam?.questions ?? [];
 
   return NextResponse.json({ attempt, questions });
 }

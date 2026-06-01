@@ -1,4 +1,4 @@
-import prisma  from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -15,10 +15,15 @@ export async function POST(
   };
 
   // Load full questions including correct answer_id for scoring + review
-  const questions = await prisma.question.findMany({
-    where: { exam_id: examId },
-    include: { choices: true },
+  // const questions = await prisma.question.findMany({
+  //   where: { exam_id: examId },
+  //   include: { choices: true },
+  // });
+  const exam = await prisma.examination.findUnique({
+    where: { id: examId },
+    include: { questions: { include: { choices: true } } },
   });
+  const questions = exam?.questions ?? [];
 
   let score = 0;
   const attemptAnswers = questions.map((q) => {
