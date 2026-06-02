@@ -7,7 +7,7 @@ import { Subject } from "@/lib/types";
 import { notFound } from "next/navigation";
 import { ExamClient } from "./ExamClient";
 
-const TOTAL_TIME = 1 * 60 * 60 + 40 * 60; // 1 hour and 40 minutes in seconds
+const TOTAL_TIME = 1 * 60 * 60 + 30 * 60; // 1 hour and 30 minutes in seconds
 
 export default async function ExamPage({
   params,

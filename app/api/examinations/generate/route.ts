@@ -16,7 +16,7 @@ import { Subject, Type } from "@/app/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-const TOTAL = 110;
+const TOTAL = 130;
 const SUBJECTS = Object.values(Subject);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
