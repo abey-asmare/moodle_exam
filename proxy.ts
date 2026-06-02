@@ -1,46 +1,46 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-// Routes that should always be publicly accessible
-const PUBLIC_PATHS = [
-  "/login", // the login page itself
-  "/api/auth/login", // the login API
-  "/api/examinations/shared/questions",
-  "/api/examinations/shared/answers",
-];
-
-// Any path that starts with '/s' is public (your (shared) group)
 function isPublicPath(pathname: string) {
-  if (pathname.startsWith("/s")) return true;
-  return PUBLIC_PATHS.includes(pathname);
+  // Shared routes always public
+  if (pathname.startsWith('/s')) return true;
+  // Shared API endpoints always public
+  if (pathname.startsWith('/api/examinations/shared/')) return true;
+  // Login page and API always public
+  if (['/login', '/api/auth/login'].includes(pathname)) return true;
+  return false;
 }
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Allow all public paths without any check
+  // Public paths – allow without token
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // 2. For everything else, check the authentication cookie
-  const token = request.cookies.get("auth-token")?.value;
+  const token = request.cookies.get('auth-token')?.value;
+  const VALID_TOKEN = process.env.ACCESS_TOKEN; // should be set in production
 
-  // Replace this with your actual token validation
-  const VALID_TOKEN = process.env.ACCESS_TOKEN || "my-secret-token";
-
-  if (!token || token !== VALID_TOKEN) {
-    // Redirect to login, preserving the original destination as a query param
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
+  // Authenticated – allow
+  if (token && token === VALID_TOKEN) {
+    return NextResponse.next();
   }
 
-  // 3. Token is valid – allow the request
-  return NextResponse.next();
+  // Not authenticated – handle differently for exam view route
+  const examViewPattern = /^\/examination\/\d+$/;
+  if (examViewPattern.test(pathname)) {
+    // Extract exam ID and redirect to shared version
+    const examId = pathname.split('/').pop(); // e.g. "10"
+    return NextResponse.redirect(new URL(`/s/examination/${examId}`, request.url));
+  }
+
+  // All other protected routes – redirect to login
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('from', pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
-// Apply the middleware to all routes except static files, Next.js internals, etc.
 export const config = {
-  matcher: ["/((?!_next|favicon.ico|api/auth/login).*)"],
+  matcher: ['/((?!_next|favicon.ico|api/auth/login).*)'],
 };

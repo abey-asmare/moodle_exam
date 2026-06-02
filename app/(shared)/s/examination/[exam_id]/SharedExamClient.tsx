@@ -482,10 +482,6 @@ function StartScreen({
                   <li>The timer starts immediately and cannot be paused.</li>
                   <li>The exam will auto-submit when time expires.</li>
                   <li>You may navigate freely between questions.</li>
-                  <li>
-                    Your result is saved locally in this browser — no account
-                    needed.
-                  </li>
                 </ul>
               </div>
             </div>
