@@ -1,16 +1,14 @@
 // app/api/examinations/generate/route.ts
 //
-// Creates (or reuses) an Examination for the requested mode, then returns its id.
-// The client navigates to /examination/[id] after this call.
+// Creates an Examination for the requested mode, avoiding questions already
+// used in previous *completed* exams of the same mode/type/year.
+// When all questions are exhausted the pool resets automatically.
 //
 // Body shapes:
 //   { mode: "random" }
 //   { mode: "catalog", type: "MODEL" | "EXIT" }
 //   { mode: "year",    type: "MODEL" | "EXIT", year: number }
 //   { mode: "hard" }
-//
-// All modes: 100 questions (or as many as available), proportional across subjects.
-// Hard mode: questions the user flagged OR previously answered incorrectly.
 
 import { Subject, Type } from "@/app/generated/prisma/client";
 import { TOTAL } from "@/lib/constants";
@@ -19,9 +17,8 @@ import { NextResponse } from "next/server";
 
 const SUBJECTS = Object.values(Subject);
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-/** Shuffle an array in-place (Fisher-Yates) and return it. */
 function shuffle<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -30,10 +27,6 @@ function shuffle<T>(arr: T[]): T[] {
   return arr;
 }
 
-/**
- * Distribute `total` slots proportionally across buckets of varying size.
- * Returns a Map<key, count>.
- */
 function proportionalPick<K>(
   buckets: Map<K, number>,
   total: number,
@@ -52,7 +45,6 @@ function proportionalPick<K>(
     assigned += share;
   }
 
-  // Fix rounding drift — add/remove from largest bucket
   const diff = total - assigned;
   if (diff !== 0) {
     const [biggestKey] = Array.from(buckets.entries()).reduce((a, b) =>
@@ -65,6 +57,53 @@ function proportionalPick<K>(
   return result;
 }
 
+/**
+ * Returns question IDs that have already appeared in at least one
+ * *completed* exam matching the given title prefix (or any exam for random).
+ *
+ * "Completed" = the exam has at least one attempt with finished_at != null.
+ */
+async function usedQuestionIds(
+  titlePrefix: string | null,
+): Promise<Set<number>> {
+  // Find completed exams matching the scope
+  const completedExams = await prisma.examination.findMany({
+    where: {
+      ...(titlePrefix ? { title: { startsWith: titlePrefix } } : {}),
+      attempts: { some: { finished_at: { not: null } } },
+    },
+    select: {
+      questions: { select: { id: true } },
+    },
+  });
+
+  const used = new Set<number>();
+  for (const exam of completedExams) {
+    for (const q of exam.questions) {
+      used.add(q.id);
+    }
+  }
+  return used;
+}
+
+/**
+ * Filter a pool of question IDs by removing already-used ones.
+ * If filtering would leave fewer than `minRequired` questions, returns
+ * the full pool (reset behaviour).
+ */
+function filterUsed(
+  pool: number[],
+  used: Set<number>,
+  minRequired: number,
+): { ids: number[]; wasReset: boolean } {
+  const fresh = pool.filter((id) => !used.has(id));
+  if (fresh.length >= minRequired) {
+    return { ids: fresh, wasReset: false };
+  }
+  // Exhausted — reset to full pool
+  return { ids: pool, wasReset: true };
+}
+
 // ── POST handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
@@ -72,6 +111,7 @@ export async function POST(req: Request) {
   const { mode } = body as { mode: string };
 
   let questionIds: number[] = [];
+  let examTitle: string | undefined;
 
   // ── MODE: random ────────────────────────────────────────────────────────────
   if (mode === "random") {
@@ -84,14 +124,26 @@ export async function POST(req: Request) {
       ),
     );
 
-    const buckets = new Map<Subject, number>();
-    SUBJECTS.forEach((s, i) => buckets.set(s, bySubject[i].length));
+    // Scope: all completed random exams (title = "Random")
+    const used = await usedQuestionIds("Random");
 
-    const picks = proportionalPick(buckets, TOTAL);
+    const buckets = new Map<Subject, number[]>();
     SUBJECTS.forEach((s, i) => {
-      const n = picks.get(s) ?? 0;
-      questionIds.push(...shuffle(bySubject[i].map((q) => q.id)).slice(0, n));
+      // Filter used per-subject; reset per-subject when that subject is exhausted
+      const all = bySubject[i].map((q) => q.id);
+      const fresh = all.filter((id) => !used.has(id));
+      // If this subject has fewer fresh than its fair share would need, reset it
+      buckets.set(s, fresh.length > 0 ? fresh : all);
     });
+
+    const sizeBuckets = new Map<Subject, number>();
+    for (const [s, ids] of buckets) sizeBuckets.set(s, ids.length);
+
+    const picks = proportionalPick(sizeBuckets, TOTAL);
+    for (const [s, n] of picks) {
+      const ids = buckets.get(s) ?? [];
+      questionIds.push(...shuffle([...ids]).slice(0, n));
+    }
 
     if (questionIds.length === 0) {
       return NextResponse.json(
@@ -99,11 +151,14 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
+
+    examTitle = "Random";
   }
 
   // ── MODE: catalog ───────────────────────────────────────────────────────────
   else if (mode === "catalog") {
     const { type } = body as { type: "MODEL" | "EXIT" };
+    const label = type === "MODEL" ? "Model" : "Exit";
 
     const allQuestions = await prisma.question.findMany({
       where: { type: type as Type },
@@ -117,8 +172,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // Scope: completed exams whose title starts with "Model " or "Exit "
+    const used = await usedQuestionIds(`${label} `);
+
+    const allIds = allQuestions.map((q) => q.id);
+    const { ids: freshIds } = filterUsed(allIds, used, TOTAL);
+
+    // Build per-subject buckets from the fresh pool
+    const freshSet = new Set(freshIds);
     const buckets = new Map<Subject, number[]>();
     for (const q of allQuestions) {
+      if (!freshSet.has(q.id)) continue;
       const list = buckets.get(q.subject) ?? [];
       list.push(q.id);
       buckets.set(q.subject, list);
@@ -129,17 +193,21 @@ export async function POST(req: Request) {
 
     const picks = proportionalPick(
       sizeBuckets,
-      Math.min(TOTAL, allQuestions.length),
+      Math.min(TOTAL, freshIds.length),
     );
     for (const [s, n] of picks) {
       const ids = buckets.get(s) ?? [];
       questionIds.push(...shuffle([...ids]).slice(0, n));
     }
+
+    examTitle = label; // e.g. "Model" or "Exit" — title set below
   }
 
   // ── MODE: year ──────────────────────────────────────────────────────────────
   else if (mode === "year") {
     const { type, year } = body as { type: "MODEL" | "EXIT"; year: number };
+    const label = type === "MODEL" ? "Model" : "Exit";
+    const titleBase = `${label} ${year}`;
 
     const allForYear = await prisma.question.findMany({
       where: { year, type: type as Type },
@@ -153,8 +221,20 @@ export async function POST(req: Request) {
       );
     }
 
+    // Scope: completed exams for this specific year+type
+    const used = await usedQuestionIds(titleBase);
+
+    const allIds = allForYear.map((q) => q.id);
+    const { ids: freshIds } = filterUsed(
+      allIds,
+      used,
+      Math.min(TOTAL, allForYear.length),
+    );
+
+    const freshSet = new Set(freshIds);
     const buckets = new Map<Subject, number[]>();
     for (const q of allForYear) {
+      if (!freshSet.has(q.id)) continue;
       const list = buckets.get(q.subject) ?? [];
       list.push(q.id);
       buckets.set(q.subject, list);
@@ -165,22 +245,26 @@ export async function POST(req: Request) {
 
     const picks = proportionalPick(
       sizeBuckets,
-      Math.min(TOTAL, allForYear.length),
+      Math.min(TOTAL, freshIds.length),
     );
     for (const [s, n] of picks) {
       const ids = buckets.get(s) ?? [];
       questionIds.push(...shuffle([...ids]).slice(0, n));
     }
 
+    if (questionIds.length === 0) {
+      return NextResponse.json(
+        { error: `No questions available for ${type} ${year}.` },
+        { status: 404 },
+      );
+    }
+
+    // Numbered title: "Model 2022", "Model 2022 (2)", etc.
     const existingCount = await prisma.examination.count({
-      where: {
-        title: {
-          startsWith: `${type === "MODEL" ? "Model" : "Exit"} ${year}`,
-        },
-      },
+      where: { title: { startsWith: titleBase } },
     });
     const index = existingCount + 1;
-    const title = `${type === "MODEL" ? "Model" : "Exit"} ${year}${index > 1 ? ` (${index})` : ""}`;
+    const title = `${titleBase}${index > 1 ? ` (${index})` : ""}`;
 
     const exam = await prisma.examination.create({
       data: {
@@ -194,6 +278,8 @@ export async function POST(req: Request) {
 
   // ── MODE: hard ──────────────────────────────────────────────────────────────
   else if (mode === "hard") {
+    // Hard mode: flagged OR previously answered incorrectly.
+    // No deduplication needed here — the pool is inherently personal and dynamic.
     const [flagged, incorrect] = await Promise.all([
       prisma.question.findMany({
         where: { is_flagged: true },
@@ -219,6 +305,15 @@ export async function POST(req: Request) {
     }
 
     questionIds = shuffle(Array.from(idSet)).slice(0, TOTAL);
+
+    const exam = await prisma.examination.create({
+      data: {
+        title: "Hard",
+        questions: { connect: questionIds.map((id) => ({ id })) },
+      },
+    });
+
+    return NextResponse.json({ exam_id: exam.id });
   }
 
   // ── Unknown mode ────────────────────────────────────────────────────────────
@@ -226,7 +321,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unknown mode." }, { status: 400 });
   }
 
-  // ── Final guard + create (random, catalog, hard) ────────────────────────────
+  // ── Create exam (random + catalog reach here) ─────────────────────────────
   if (questionIds.length === 0) {
     return NextResponse.json(
       { error: "No questions available for this mode." },
@@ -234,15 +329,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const modeLabel: Record<string, string> = {
-    random: "Random",
-    catalog: "Catalog",
-    hard: "Hard",
-  };
-
   const exam = await prisma.examination.create({
     data: {
-      title: modeLabel[mode] ?? mode,
+      title: examTitle ?? mode,
       questions: { connect: questionIds.map((id) => ({ id })) },
     },
   });
