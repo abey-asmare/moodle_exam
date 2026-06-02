@@ -13,10 +13,10 @@
 // Hard mode: questions the user flagged OR previously answered incorrectly.
 
 import { Subject, Type } from "@/app/generated/prisma/client";
+import { TOTAL } from "@/lib/constants";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-const TOTAL = 130;
 const SUBJECTS = Object.values(Subject);
 
 // ── helpers ──────────────────────────────────────────────────────────────────

@@ -6,8 +6,8 @@ import prisma from "@/lib/prisma";
 import { Subject } from "@/lib/types";
 import { notFound } from "next/navigation";
 import { ExamClient } from "./ExamClient";
+import { TOTAL_TIME } from "@/lib/constants";
 
-const TOTAL_TIME = 1 * 60 * 60 + 30 * 60; // 1 hour and 30 minutes in seconds
 
 export default async function ExamPage({
   params,

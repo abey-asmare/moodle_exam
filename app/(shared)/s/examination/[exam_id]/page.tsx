@@ -3,11 +3,10 @@
 // Fetches questions WITHOUT answer_id — answers are revealed client-side
 // only after the user submits, using data stored in localStorage.
 
+import { TOTAL_TIME } from "@/lib/constants";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { SharedExamClient } from "./SharedExamClient";
-
-const TOTAL_TIME = 1 * 60 * 60 + 40 * 60; // 1h 40m
 
 export default async function SharedExamPage({
   params,
@@ -46,5 +45,3 @@ export default async function SharedExamPage({
     <SharedExamClient exam={safeExam} examId={examId} totalTime={TOTAL_TIME} />
   );
 }
-
-
