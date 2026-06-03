@@ -8,38 +8,38 @@ const adapter = new PrismaPg({
 });
 const prisma = new PrismaClient({ adapter });
 
-
-
 async function main() {
-  for (const q of questions) {
-    // Create the question (exam_id is null, to be linked later)
-    const question = await prisma.question.create({
-      data: {
-        text: q.text,
-        subject: q.subject as Subject,
-        type: Type.MODEL,
-        year: 2019,
-        from: null,
-        is_flagged: false,
-      },
-    });
+  await prisma.$transaction(
+    async (tx) => {
+      for (const q of questions) {
+        const question = await tx.question.create({
+          data: {
+            text: q.text,
+            subject: q.subject as Subject,
+            type: Type.MODEL,
+            year: q.year ?? 2019,
+            from: q.from ?? null,
+            is_flagged: false,
+          },
+        });
 
-    // Create the four choices
-    const choices = await Promise.all(
-      q.choices.map((choiceText) =>
-        prisma.choice.create({
-          data: { choice_text: choiceText, question_id: question.id },
-        }),
-      ),
-    );
+        const choices = await Promise.all(
+          q.choices.map((choiceText) =>
+            tx.choice.create({
+              data: { choice_text: choiceText, question_id: question.id },
+            })
+          )
+        );
 
-    // Link the correct answer
-    const correctChoice = choices[q.correctIndex];
-    await prisma.question.update({
-      where: { id: question.id },
-      data: { answer_id: correctChoice.id },
-    });
-  }
+        const correctChoice = choices[q.correctIndex];
+        await tx.question.update({
+          where: { id: question.id },
+          data: { answer_id: correctChoice.id },
+        });
+      }
+    },
+    { timeout: 60000 * 10 }// 10min
+  );
 
   console.log(`✅ Seeded ${questions.length} questions successfully.`);
 }
